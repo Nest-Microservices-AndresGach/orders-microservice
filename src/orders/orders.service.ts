@@ -6,7 +6,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { PrismaClient } from 'generated/prisma';
+import { PrismaClient } from '@prisma/client';
+// import { PrismaClient } from 'generated/prisma';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { OrderPaginationDto } from './dto/order-pagination.dto';
 import { changeOrderStatusDto, OrderItemDto, PaidOrderDto } from './dto';

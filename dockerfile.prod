@@ -1,0 +1,59 @@
+# El profesor le gusta dividir los dockerfiles en 3 etapas
+
+# 1. Dependencias
+FROM node:20-alpine AS deps
+
+WORKDIR /usr/src/app
+
+COPY package.json ./
+COPY package-lock.json ./
+
+RUN npm install
+
+
+
+
+# 2. Builder - Construye la aplicación
+FROM node:20-alpine AS build
+
+ARG ORDERS_DATABASE_URL
+ENV DATABASE_URL=$ORDERS_DATABASE_URL
+
+WORKDIR /usr/src/app
+
+#Copiar de deps, los módulos de node
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+
+# Acá abajo copia el codigo fuente de la aplicación (Copia todo lo que no esté definido en el docker ignore)
+COPY . .
+
+RUN npx prisma migrate deploy
+RUN npx prisma generate
+
+# RUN npm run test #Esto es para testear el codigo (Fernando tiene un curso de testing en nest, es bueno hacerle pruebas al codigo antes de subirlo)
+RUN npm run build
+
+RUN npm ci -f --only=production && npm cache clean --force # -f significa force, -force o --f = --force
+
+# RUN npx prisma migrate deploy # * Esto serviría si ya tenemos una DB (se manda la url de la DB). Si es la primera vez no porque ni si quiera tenemos la db en prod
+
+# 3. Crear la imagen final de Docker
+FROM node:20-alpine AS prod
+
+WORKDIR /usr/src/app
+
+COPY --from=build /usr/src/app/node_modules ./node_modules
+
+#Copiar la carpeta de DIST (DISTRIBUCIÓN)
+COPY --from=build /usr/src/app/dist ./dist
+
+# Esto fernando lo recomienda como algo opcional, pero dice que se ve en varios proyectos y es decir en que fase está la imagen está en producción
+ENV NODE_ENV=production
+
+# Nos pasamos al usuario "node" para ejecutar los comandos, si no dejamos ninguno establecido 
+# toma el superuser y son muchos privilegios que pueden ser riesgosos si se dejan en la máquina
+USER node
+
+EXPOSE 3000
+
+CMD ["node", "dist/main.js"]
