@@ -25,6 +25,7 @@ async function bootstrap() {
     }),
   );
   await app.listen();
+  logger.log(`prueba commit para cloud`);
   logger.log(`Products Microservice running on port ${envs.port}`);
 }
 bootstrap();
